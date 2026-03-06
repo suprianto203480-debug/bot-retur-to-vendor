@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Scanner Barcode</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body{
+    font-family: Arial;
+    text-align:center;
+    background:#f5f5f5;
+}
+
+#reader{
+    width:300px;
+    margin:auto;
+}
+
+h2{
+    margin-top:20px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>📷 Scan Barcode</h2>
+
+<div id="reader"></div>
+
+<script>
+
+function onScanSuccess(decodedText, decodedResult) {
+
+    alert("Barcode: " + decodedText);
+
+    if (window.Telegram.WebApp){
+        Telegram.WebApp.sendData(decodedText);
+        Telegram.WebApp.close();
+    }
+
+}
+
+let scanner = new Html5QrcodeScanner(
+    "reader",
+    { fps: 10, qrbox: 250 }
+);
+
+scanner.render(onScanSuccess);
+
+</script>
+
+</body>
+</html>
