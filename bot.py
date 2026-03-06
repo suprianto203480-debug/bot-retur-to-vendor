@@ -1,15 +1,34 @@
 import os
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Bot Retur Vendor Aktif")
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "📷 Scan Barcode",
+                web_app=WebAppInfo(
+                    url="https://suprianto203480-debug.github.io/telegram-scanner/scanner.html"
+                )
+            )
+        ]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        "Bot Retur Vendor Aktif\n\nKlik tombol untuk scan barcode:",
+        reply_markup=reply_markup
+    )
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
+
     app.add_handler(CommandHandler("start", start))
+
     print("Bot berjalan...")
     app.run_polling()
 
