@@ -3,53 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <title>Scanner Barcode</title>
-
 <script src="https://unpkg.com/html5-qrcode"></script>
-
 <style>
 body{
-    font-family: Arial;
-    text-align:center;
-    background:#f5f5f5;
+font-family: Arial;
+text-align:center;
+margin-top:20px;
 }
-
 #reader{
-    width:300px;
-    margin:auto;
-}
-
-h2{
-    margin-top:20px;
+width:300px;
+margin:auto;
 }
 </style>
-
 </head>
 
 <body>
 
-<h2>📷 Scan Barcode</h2>
+<h2>Scanner Barcode</h2>
 
 <div id="reader"></div>
 
+<p>Hasil Scan:</p>
+<h3 id="result"></h3>
+
 <script>
 
-function onScanSuccess(decodedText, decodedResult) {
-
-    alert("Barcode: " + decodedText);
-
-    if (window.Telegram.WebApp){
-        Telegram.WebApp.sendData(decodedText);
-        Telegram.WebApp.close();
-    }
-
+function onScanSuccess(decodedText) {
+document.getElementById("result").innerText = decodedText;
 }
 
-let scanner = new Html5QrcodeScanner(
-    "reader",
-    { fps: 10, qrbox: 250 }
+const html5QrCode = new Html5Qrcode("reader");
+
+Html5Qrcode.getCameras().then(devices => {
+if (devices && devices.length) {
+
+html5QrCode.start(
+devices[0].id,
+{
+fps: 10,
+qrbox: 250
+},
+onScanSuccess
 );
 
-scanner.render(onScanSuccess);
+}
+});
 
 </script>
 
