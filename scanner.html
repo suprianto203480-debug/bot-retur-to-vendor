@@ -36,33 +36,18 @@ function onScanSuccess(decodedText) {
 document.getElementById("result").innerText = decodedText;
 }
 
-const html5QrCode = new Html5Qrcode("reader");
+function onScanFailure(error) {}
 
-Html5QrCode.getCameras().then(devices => {
-
-if (!devices || devices.length == 0) {
-alert("Kamera tidak ditemukan");
-return;
-}
-
-let cameraId = devices[0].id;
-
-devices.forEach(device => {
-if(device.label.toLowerCase().includes("back")){
-cameraId = device.id;
-}
-});
-
-html5QrCode.start(
-cameraId,
+const scanner = new Html5QrcodeScanner(
+"reader",
 {
 fps: 10,
-qrbox: 250
-},
-onScanSuccess
+qrbox: { width: 250, height: 250 },
+rememberLastUsedCamera: true
+}
 );
 
-});
+scanner.render(onScanSuccess, onScanFailure);
 
 </script>
 
