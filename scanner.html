@@ -3,18 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <title>Scanner Barcode</title>
+
 <script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
 body{
 font-family: Arial;
 text-align:center;
 margin-top:20px;
 }
+
 #reader{
 width:300px;
 margin:auto;
 }
 </style>
+
 </head>
 
 <body>
@@ -34,11 +38,23 @@ document.getElementById("result").innerText = decodedText;
 
 const html5QrCode = new Html5Qrcode("reader");
 
-Html5Qrcode.getCameras().then(devices => {
-if (devices && devices.length) {
+Html5QrCode.getCameras().then(devices => {
+
+if (!devices || devices.length == 0) {
+alert("Kamera tidak ditemukan");
+return;
+}
+
+let cameraId = devices[0].id;
+
+devices.forEach(device => {
+if(device.label.toLowerCase().includes("back")){
+cameraId = device.id;
+}
+});
 
 html5QrCode.start(
-devices[0].id,
+cameraId,
 {
 fps: 10,
 qrbox: 250
@@ -46,7 +62,6 @@ qrbox: 250
 onScanSuccess
 );
 
-}
 });
 
 </script>
