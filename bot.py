@@ -11,7 +11,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton(
                 "📷 Scan Barcode",
                 web_app=WebAppInfo(
-                    url="https://suprianto203480-debug.github.io/telegram-scanner/scanner.html"
+                    url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
                 )
             )
         ]
