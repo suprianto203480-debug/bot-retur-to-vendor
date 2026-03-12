@@ -1,35 +1,43 @@
 import os
 import psycopg2
-import json
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
+
 TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
+
 
 # ================= DATABASE =================
 
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
+
 def cari_produk(upc):
 
-    conn = get_connection()
-    cur = conn.cursor()
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
 
-    cur.execute("""
-        SELECT item_desc, unit_retail, soh
-        FROM produk_master
-        WHERE upc = %s
-        LIMIT 1
-    """, (upc,))
+        cur.execute("""
+            SELECT item_desc, unit_retail, soh
+            FROM produk_master
+            WHERE upc = %s
+            LIMIT 1
+        """, (upc,))
 
-    data = cur.fetchone()
+        data = cur.fetchone()
 
-    cur.close()
-    conn.close()
+        cur.close()
+        conn.close()
 
-    return data
+        return data
+
+    except Exception as e:
+        print("ERROR DATABASE:", e)
+        return None
 
 
 # ================= START =================
@@ -57,12 +65,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    if not update.effective_message.web_app_data:
+    message = update.message
+
+    if not message:
         return
 
-    data = json.loads(update.effective_message.web_app_data.data)
+    if not message.web_app_data:
+        return
 
-    barcode = data["barcode"]
+    barcode = message.web_app_data.data.strip()
+
+    print("BARCODE MASUK:", barcode)
 
     produk = cari_produk(barcode)
 
@@ -72,16 +85,19 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         pesan = (
             f"📦 Produk : {nama}\n"
-            f"💰 Harga  : Rp {harga}\n"
+            f"💰 Harga  : Rp {harga:,.0f}\n"
             f"📊 Stok   : {stok}\n"
             f"🔎 UPC    : {barcode}"
         )
 
     else:
 
-        pesan = f"❌ Produk tidak ditemukan\nUPC: {barcode}"
+        pesan = (
+            "❌ Produk tidak ditemukan\n\n"
+            f"🔎 UPC : {barcode}"
+        )
 
-    await update.message.reply_text(pesan)
+    await message.reply_text(pesan)
 
 
 # ================= MAIN =================
