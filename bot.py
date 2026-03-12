@@ -59,7 +59,9 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_message.web_app_data:
         return
 
-    barcode = update.effective_message.web_app_data.data
+    data = json.loads(update.effective_message.web_app_data.data)
+
+    barcode = data["barcode"]
 
     produk = cari_produk(barcode)
 
