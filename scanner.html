@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <title>Scanner Barcode</title>
 
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body{
-font-family: Arial;
+font-family:Arial;
 text-align:center;
-margin-top:20px;
+padding:20px;
 }
-
 #reader{
 width:300px;
 margin:auto;
@@ -28,26 +28,36 @@ margin:auto;
 <div id="reader"></div>
 
 <p>Hasil Scan:</p>
-<h3 id="result"></h3>
+<h3 id="hasil">-</h3>
 
 <script>
 
-function onScanSuccess(decodedText) {
-document.getElementById("result").innerText = decodedText;
-}
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-function onScanFailure(error) {}
+function onScanSuccess(decodedText){
+
+document.getElementById("hasil").innerText = decodedText;
+
+/* kirim barcode ke bot */
+tg.sendData(decodedText);
+
+/* tutup scanner */
+setTimeout(function(){
+tg.close();
+},500);
+
+}
 
 const scanner = new Html5QrcodeScanner(
 "reader",
 {
-fps: 10,
-qrbox: { width: 250, height: 250 },
-rememberLastUsedCamera: true
+fps:10,
+qrbox:250
 }
 );
 
-scanner.render(onScanSuccess, onScanFailure);
+scanner.render(onScanSuccess);
 
 </script>
 
