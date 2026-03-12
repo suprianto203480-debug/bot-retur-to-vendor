@@ -17,7 +17,7 @@ def cari_produk(upc):
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT nama_produk, avg_cost, stok
+        SELECT item_desc, unit_retail, soh
         FROM produk_master
         WHERE upc = %s
         LIMIT 1
@@ -30,20 +30,19 @@ def cari_produk(upc):
 
     return data
 
+
 # ================= START =================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📷 Scan Barcode",
-                web_app=WebAppInfo(
-                    url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
-                )
+    keyboard = [[
+        InlineKeyboardButton(
+            "📷 Scan Barcode",
+            web_app=WebAppInfo(
+                url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
             )
-        ]
-    ]
+        )
+    ]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -52,9 +51,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
+
 # ================= TERIMA DATA SCANNER =================
 
 async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    if not update.effective_message.web_app_data:
+        return
 
     barcode = update.effective_message.web_app_data.data
 
@@ -77,6 +80,7 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(pesan)
 
+
 # ================= MAIN =================
 
 def main():
@@ -93,5 +97,9 @@ def main():
     )
 
     print("✅ BOT SCANNER AKTIF")
+
     app.run_polling()
+
+
+if __name__ == "__main__":
     main()
