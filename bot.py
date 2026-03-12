@@ -6,66 +6,87 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-def get_conn():
+# ================= DATABASE =================
+
+def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 def cari_produk(upc):
 
-    conn = get_conn()
+    conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT item_desc, unit_retail, soh
+        SELECT nama_produk, avg_cost, stok
         FROM produk_master
         WHERE upc = %s
         LIMIT 1
     """, (upc,))
 
-    row = cur.fetchone()
+    data = cur.fetchone()
 
     cur.close()
     conn.close()
 
-    return row
+    return data
+
+# ================= START =================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    keyboard = [[
-        InlineKeyboardButton(
-            "📷 Scan Barcode",
-            web_app=WebAppInfo(
-                url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "📷 Scan Barcode",
+                web_app=WebAppInfo(
+                    url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
+                )
             )
-        )
-    ]]
+        ]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        "Bot Retur Vendor Aktif\nKlik tombol scan:",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        "Bot Retur Vendor Aktif\n\nKlik tombol untuk scan barcode:",
+        reply_markup=reply_markup
     )
 
-async def scan_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ================= TERIMA DATA SCANNER =================
 
-    upc = update.message.text
+async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    produk = cari_produk(upc)
+    barcode = update.effective_message.web_app_data.data
+
+    produk = cari_produk(barcode)
 
     if produk:
+
         nama, harga, stok = produk
-        pesan = f"📦 {nama}\n💰 Harga: Rp {harga}\n📊 Stok: {stok}"
+
+        pesan = (
+            f"📦 Produk : {nama}\n"
+            f"💰 Harga  : Rp {harga}\n"
+            f"📊 Stok   : {stok}\n"
+            f"🔎 UPC    : {barcode}"
+        )
+
     else:
-        pesan = "❌ Produk tidak ditemukan"
+
+        pesan = f"❌ Produk tidak ditemukan\nUPC: {barcode}"
 
     await update.message.reply_text(pesan)
+
+# ================= MAIN =================
 
 def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, scan_result))
+    app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_handler))
 
-    print("Bot berjalan...")
+    print("✅ Bot scan barcode aktif")
     app.run_polling()
 
 if __name__ == "__main__":
