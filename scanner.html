@@ -1,136 +1,101 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Scanner Barcode</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.2.0/minified/html5-qrcode.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 20px;
-            margin: 0;
-            background-color: #f5f5f5;
-        }
-        h2 {
-            color: #333;
-        }
-        #reader {
-            width: 100%;
-            max-width: 400px;
-            margin: 20px auto;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        #hasil {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2c3e50;
-            word-break: break-all;
-        }
-        .error {
-            color: red;
-            margin-top: 10px;
-        }
-        button {
-            background-color: #0088cc;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            font-size: 16px;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #006699;
-        }
-    </style>
+<meta charset="UTF-8">
+<title>Scanner Barcode</title>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+
+<style>
+body{
+font-family:Arial;
+text-align:center;
+padding:15px;
+margin:0;
+background:#f5f5f5;
+}
+
+#reader{
+width:100%;
+max-width:350px;
+margin:auto;
+}
+
+#hasil{
+font-size:18px;
+font-weight:bold;
+margin-top:10px;
+}
+</style>
 </head>
+
 <body>
 
-<h2>🔍 Scanner Barcode</h2>
+<h2>📷 Scan Barcode</h2>
+
 <div id="reader"></div>
 
 <p>Hasil Scan:</p>
 <h3 id="hasil">-</h3>
-<div id="errorMsg" class="error"></div>
-
-<!-- Tombol dummy untuk pengujian (hapus jika sudah tidak diperlukan) -->
-<button id="btnDummy" style="display:none;">Kirim Dummy</button>
 
 <script>
-    (function() {
-        const tg = window.Telegram.WebApp;
-        tg.expand(); // Memperluas web app ke layar penuh
 
-        // Elemen DOM
-        const hasilEl = document.getElementById('hasil');
-        const errorEl = document.getElementById('errorMsg');
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-        // Fungsi ketika scan berhasil
-        function onScanSuccess(decodedText) {
-            console.log('✅ Scan berhasil:', decodedText);
-            hasilEl.innerText = decodedText;
-            errorEl.innerText = '';
+const hasil = document.getElementById("hasil");
 
-            // Kirim data ke bot Telegram
-            try {
-                tg.sendData(decodedText);
-                console.log('📤 Data terkirim ke bot');
-            } catch (e) {
-                console.error('❌ Gagal mengirim data:', e);
-                errorEl.innerText = 'Gagal mengirim data. Tutup dan coba lagi.';
-                return;
-            }
+function startScanner(){
 
-            // Tutup web app setelah 500ms
-            setTimeout(() => {
-                tg.close();
-            }, 500);
-        }
+const html5QrCode = new Html5Qrcode("reader");
 
-        // Fungsi ketika scan gagal (misal kamera error)
-        function onScanError(errorMessage) {
-            console.warn('⚠️ Scan error:', errorMessage);
-            // Tampilkan pesan error jika perlu, tapi jangan spam
-            // Kita hanya tampilkan jika benar-benar error serius
-            if (errorMessage.includes('NotFound')) {
-                errorEl.innerText = 'Kamera tidak ditemukan. Pastikan perangkat memiliki kamera.';
-            } else if (errorMessage.includes('Permission')) {
-                errorEl.innerText = 'Izin kamera ditolak. Izinkan akses kamera.';
-            } else {
-                // Opsional: tampilkan error lainnya
-                // errorEl.innerText = 'Error: ' + errorMessage;
-            }
-        }
+Html5Qrcode.getCameras().then(devices => {
 
-        // Inisialisasi scanner
-        const scanner = new Html5QrcodeScanner(
-            'reader',
-            {
-                fps: 10,
-                qrbox: 250,
-                rememberLastUsedCamera: true,
-                showTorchButtonIfSupported: true
-            },
-            /* verbose= */ false
-        );
+if(devices && devices.length){
 
-        scanner.render(onScanSuccess, onScanError);
+const cameraId = devices[0].id;
 
-        // ===== Tombol dummy untuk pengujian (opsional) =====
-        const btnDummy = document.getElementById('btnDummy');
-        btnDummy.style.display = 'block'; // tampilkan tombol
-        btnDummy.onclick = function() {
-            const dummyCode = '8991234567890'; // ganti dengan kode dummy
-            onScanSuccess(dummyCode);
-        };
-        // ===== Selesai bagian dummy =====
+html5QrCode.start(
+cameraId,
+{
+fps:10,
+qrbox:250
+},
+(decodedText)=>{
 
-    })();
+hasil.innerText = decodedText;
+
+/* kirim ke bot */
+tg.sendData(decodedText);
+
+/* stop kamera */
+html5QrCode.stop();
+
+/* tutup webapp */
+setTimeout(()=>{
+tg.close();
+},500);
+
+},
+(errorMessage)=>{
+// ignore scan error
+}
+);
+
+}else{
+hasil.innerText="Kamera tidak ditemukan";
+}
+
+}).catch(err=>{
+hasil.innerText="Tidak bisa akses kamera";
+console.log(err);
+});
+
+}
+
+startScanner();
+
 </script>
 
 </body>
