@@ -11,14 +11,14 @@
 body{
 font-family:Arial;
 text-align:center;
-padding:15px;
+padding:10px;
 margin:0;
 background:#f5f5f5;
 }
 
 #reader{
 width:100%;
-max-width:350px;
+max-width:380px;
 margin:auto;
 }
 
@@ -37,7 +37,7 @@ margin-top:10px;
 <div id="reader"></div>
 
 <p>Hasil Scan:</p>
-<h3 id="hasil">-</h3>
+<h3 id="hasil">Menyalakan kamera...</h3>
 
 <script>
 
@@ -49,32 +49,40 @@ const hasil = document.getElementById("hasil");
 const html5QrCode = new Html5Qrcode("reader");
 
 html5QrCode.start(
-{ facingMode: "environment" },   // langsung kamera belakang
+{ facingMode: "environment" },   // kamera belakang
 {
-fps: 10,
-qrbox: { width: 250, height: 250 }
+fps: 20,                          // scan lebih cepat
+qrbox: { width: 300, height: 300 }, // area scan lebih besar
+aspectRatio: 1.7778,
+disableFlip: false,
+experimentalFeatures: {
+useBarCodeDetectorIfSupported: true
+},
+rememberLastUsedCamera: true,
+showTorchButtonIfSupported: true   // tombol lampu
 },
 (decodedText)=>{
 
 hasil.innerText = decodedText;
 
-/* kirim ke bot */
+if(navigator.vibrate){
+navigator.vibrate(200); // getar saat berhasil
+}
+
 tg.sendData(decodedText);
 
-/* stop kamera */
 html5QrCode.stop();
 
-/* tutup webapp */
 setTimeout(()=>{
 tg.close();
-},500);
+},400);
 
 },
 (errorMessage)=>{
-// abaikan error scan kecil
+// abaikan error kecil saat scanning
 }
 ).catch(err=>{
-hasil.innerText="Tidak bisa akses kamera";
+hasil.innerText="❌ Tidak bisa akses kamera";
 console.log(err);
 });
 
