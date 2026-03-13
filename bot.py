@@ -40,16 +40,18 @@ def cari_produk(upc):
 
 # ================= TOMBOL SCAN =================
 
+# ================= TOMBOL SCAN =================
+
 def tombol_scan():
 
-    keyboard = [[
-        InlineKeyboardButton(
+    keyboard = [
+        [InlineKeyboardButton(
             "📷 Scan Barcode",
             web_app=WebAppInfo(
                 url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
             )
-        )
-    ]]
+        )]
+    ]
 
     return InlineKeyboardMarkup(keyboard)
 
