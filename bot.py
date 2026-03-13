@@ -1,4 +1,3 @@
-
 import os
 import psycopg2
 
@@ -23,7 +22,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 # ================= DATABASE =================
 
 def get_connection():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg2.connect(DATABASE_URL, sslmode="require")
 
 
 def cari_produk_database(keyword):
@@ -63,12 +62,14 @@ def cari_produk_database(keyword):
 def tombol_scan():
 
     keyboard = [
-        [InlineKeyboardButton(
-            "📷 Scan Barcode",
-            web_app=WebAppInfo(
-                url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
+        [
+            InlineKeyboardButton(
+                "📷 Scan Barcode",
+                web_app=WebAppInfo(
+                    url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
+                )
             )
-        )]
+        ]
     ]
 
     return InlineKeyboardMarkup(keyboard)
@@ -83,7 +84,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Menu:\n"
         "/scan - Scan Barcode\n"
         "/cari - Cari Produk\n\n"
-        "atau klik tombol scanner."
+        "Atau kirim UPC / nama produk langsung."
     )
 
     await update.message.reply_text(
@@ -130,7 +131,7 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await kirim_hasil(update, hasil)
 
 
-# ================= TERIMA TEXT PENCARIAN =================
+# ================= TERIMA TEXT =================
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -157,10 +158,15 @@ async def kirim_hasil(update, hasil):
 
     for upc, nama, harga, stok in hasil:
 
+        try:
+            harga_format = f"Rp {harga:,.0f}"
+        except:
+            harga_format = str(harga)
+
         pesan += (
             f"*{nama}*\n"
             f"UPC : `{upc}`\n"
-            f"Harga : Rp {harga:,.0f}\n"
+            f"Harga : {harga_format}\n"
             f"Stok : {stok}\n\n"
         )
 
@@ -196,4 +202,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
