@@ -115,12 +115,7 @@ def main():
 
     app.add_handler(CommandHandler("start", start))
 
-    app.add_handler(
-        MessageHandler(
-            filters.StatusUpdate.WEB_APP_DATA,
-            webapp_handler
-        )
-    )
+    app.add_handler(MessageHandler(filters.ALL, webapp_handler))
 
     print("✅ BOT SCANNER AKTIF")
 
