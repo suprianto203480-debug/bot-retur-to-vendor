@@ -42,47 +42,51 @@ margin-top:10px;
 <script>
 
 const tg = window.Telegram.WebApp;
+tg.ready();
 tg.expand();
 
 const hasil = document.getElementById("hasil");
 
-const html5QrCode = new Html5Qrcode("reader");
+const scanner = new Html5Qrcode("reader");
 
-html5QrCode.start(
-{ facingMode: "environment" },   // kamera belakang
+scanner.start(
+{ facingMode: "environment" },
 {
-fps: 20,                          // scan lebih cepat
-qrbox: { width: 300, height: 300 }, // area scan lebih besar
-aspectRatio: 1.7778,
-disableFlip: false,
-experimentalFeatures: {
-useBarCodeDetectorIfSupported: true
+fps: 15,
+qrbox: 280
 },
-rememberLastUsedCamera: true,
-showTorchButtonIfSupported: true   // tombol lampu
-},
-(decodedText)=>{
+(barcode)=>{
 
-hasil.innerText = decodedText;
+console.log("BARCODE:", barcode);
+
+hasil.innerText = barcode;
 
 if(navigator.vibrate){
-navigator.vibrate(200); // getar saat berhasil
+navigator.vibrate(200);
 }
 
-tg.sendData(decodedText);
+try{
 
-html5QrCode.stop();
+tg.sendData(barcode);
+
+console.log("DATA DIKIRIM KE BOT");
+
+}catch(e){
+
+console.log("ERROR SEND DATA", e);
+
+}
+
+scanner.stop();
 
 setTimeout(()=>{
 tg.close();
-},400);
+},500);
 
 },
-(errorMessage)=>{
-// abaikan error kecil saat scanning
-}
+(error)=>{}
 ).catch(err=>{
-hasil.innerText="❌ Tidak bisa akses kamera";
+hasil.innerText="❌ Kamera gagal dibuka";
 console.log(err);
 });
 
