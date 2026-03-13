@@ -1,8 +1,21 @@
+```python
 import os
 import psycopg2
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    WebAppInfo
+)
+
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters
+)
 
 TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -13,20 +26,26 @@ def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
-def cari_produk(upc):
+def cari_produk_database(keyword):
 
     try:
         conn = get_connection()
         cur = conn.cursor()
 
-        cur.execute("""
-            SELECT item_desc, unit_retail, soh
-            FROM produk_master
-            WHERE upc = %s
-            LIMIT 1
-        """, (upc,))
+        query = """
+        SELECT upc, item_desc, unit_retail, soh
+        FROM produk_master
+        WHERE
+            upc ILIKE %s
+            OR item_desc ILIKE %s
+        LIMIT 10
+        """
 
-        data = cur.fetchone()
+        param = (f"%{keyword}%", f"%{keyword}%")
+
+        cur.execute(query, param)
+
+        data = cur.fetchall()
 
         cur.close()
         conn.close()
@@ -34,11 +53,10 @@ def cari_produk(upc):
         return data
 
     except Exception as e:
+
         print("ERROR DATABASE:", e)
         return None
 
-
-# ================= TOMBOL SCAN =================
 
 # ================= TOMBOL SCAN =================
 
@@ -60,9 +78,37 @@ def tombol_scan():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    text = (
+        "🤖 *Bot Retur Vendor Aktif*\n\n"
+        "Menu:\n"
+        "/scan - Scan Barcode\n"
+        "/cari - Cari Produk\n\n"
+        "atau klik tombol scanner."
+    )
+
     await update.message.reply_text(
-        "🤖 Bot Retur Vendor Aktif\n\nKlik tombol untuk scan barcode:",
+        text,
+        parse_mode="Markdown",
         reply_markup=tombol_scan()
+    )
+
+
+# ================= SCAN =================
+
+async def scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    await update.message.reply_text(
+        "📷 Klik tombol untuk scan barcode:",
+        reply_markup=tombol_scan()
+    )
+
+
+# ================= CARI =================
+
+async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    await update.message.reply_text(
+        "🔎 Kirim UPC atau nama produk yang ingin dicari."
     )
 
 
@@ -79,28 +125,46 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     print("BARCODE MASUK:", barcode)
 
-    produk = cari_produk(barcode)
+    hasil = cari_produk_database(barcode)
 
-    if produk:
+    await kirim_hasil(update, hasil)
 
-        nama, harga, stok = produk
 
-        pesan = (
-            f"📦 *Produk Ditemukan*\n\n"
-            f"Nama  : {nama}\n"
+# ================= TERIMA TEXT PENCARIAN =================
+
+async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    keyword = update.message.text.strip()
+
+    hasil = cari_produk_database(keyword)
+
+    await kirim_hasil(update, hasil)
+
+
+# ================= FORMAT HASIL =================
+
+async def kirim_hasil(update, hasil):
+
+    if not hasil:
+
+        await update.message.reply_text(
+            "❌ Produk tidak ditemukan."
+        )
+
+        return
+
+    pesan = "📦 *Hasil Pencarian*\n\n"
+
+    for upc, nama, harga, stok in hasil:
+
+        pesan += (
+            f"*{nama}*\n"
+            f"UPC : `{upc}`\n"
             f"Harga : Rp {harga:,.0f}\n"
-            f"Stok  : {stok}\n"
-            f"UPC   : `{barcode}`"
+            f"Stok : {stok}\n\n"
         )
 
-    else:
-
-        pesan = (
-            f"❌ Produk tidak ditemukan\n\n"
-            f"UPC : `{barcode}`"
-        )
-
-    await message.reply_text(
+    await update.message.reply_text(
         pesan,
         parse_mode="Markdown",
         reply_markup=tombol_scan()
@@ -114,13 +178,22 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("scan", scan))
+    app.add_handler(CommandHandler("cari", cari))
 
-    app.add_handler(MessageHandler(filters.ALL, webapp_handler))
+    app.add_handler(
+        MessageHandler(filters.StatusUpdate.WEB_APP_DATA, webapp_handler)
+    )
 
-    print("✅ BOT SCANNER AKTIF")
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler)
+    )
+
+    print("✅ BOT RETUR VENDOR AKTIF")
 
     app.run_polling()
 
 
 if __name__ == "__main__":
     main()
+```
