@@ -46,21 +46,13 @@ tg.expand();
 
 const hasil = document.getElementById("hasil");
 
-function startScanner(){
-
 const html5QrCode = new Html5Qrcode("reader");
 
-Html5Qrcode.getCameras().then(devices => {
-
-if(devices && devices.length){
-
-const cameraId = devices[0].id;
-
 html5QrCode.start(
-cameraId,
+{ facingMode: "environment" },   // langsung kamera belakang
 {
-fps:10,
-qrbox:250
+fps: 10,
+qrbox: { width: 250, height: 250 }
 },
 (decodedText)=>{
 
@@ -79,22 +71,12 @@ tg.close();
 
 },
 (errorMessage)=>{
-// ignore scan error
+// abaikan error scan kecil
 }
-);
-
-}else{
-hasil.innerText="Kamera tidak ditemukan";
-}
-
-}).catch(err=>{
+).catch(err=>{
 hasil.innerText="Tidak bisa akses kamera";
 console.log(err);
 });
-
-}
-
-startScanner();
 
 </script>
 
