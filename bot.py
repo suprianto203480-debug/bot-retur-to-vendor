@@ -31,58 +31,44 @@ def cari_produk_by_upc(upc):
         return None
 
 def cari_produk_by_keyword(keyword):
-    """
-    Cari produk:
-    1. Exact match di UPC
-    2. Exact match di SKU
-    3. Partial match (ILIKE) di item_desc (bisa juga di SKU/UPC jika perlu, tapi kita batasi di desc)
-    Mengembalikan tuple jika exact, list of tuples jika banyak, None jika tidak ada.
-    """
     try:
         conn = get_connection()
         cur = conn.cursor()
 
-        # 1. Exact UPC
         cur.execute("""
             SELECT sku, item_desc, unit_retail, soh, upc
             FROM produk_master
-            WHERE upc = %s
-            LIMIT 1
-        """, (keyword,))
-        data = cur.fetchone()
-        if data:
-            return data  # tuple
-
-        # 2. Exact SKU
-        cur.execute("""
-            SELECT sku, item_desc, unit_retail, soh, upc
-            FROM produk_master
-            WHERE sku = %s
-            LIMIT 1
-        """, (keyword,))
-        data = cur.fetchone()
-        if data:
-            return data
-
-        # 3. Partial di deskripsi (dan mungkin juga di SKU/UPC? Tapi biasanya deskripsi)
-        # Kita cari di item_desc, bisa juga ditambahkan sku dan upc jika ingin
-        cur.execute("""
-            SELECT sku, item_desc, unit_retail, soh, upc
-            FROM produk_master
-            WHERE item_desc ILIKE %s
+            WHERE
+                upc::text = %s
+                OR sku::text = %s
+                OR item_desc ILIKE %s
+                OR sku::text ILIKE %s
+                OR upc::text ILIKE %s
             LIMIT 10
-        """, (f'%{keyword}%',))
-        results = cur.fetchall()
-        if results:
-            return results  # list of tuples
+        """, (
+            keyword,
+            keyword,
+            f"%{keyword}%",
+            f"%{keyword}%",
+            f"%{keyword}%"
+        ))
 
-        return None
-    except Exception as e:
-        print("ERROR DATABASE (keyword):", e)
-        return None
-    finally:
+        results = cur.fetchall()
+
         cur.close()
         conn.close()
+
+        if len(results) == 1:
+            return results[0]  # tuple
+
+        if len(results) > 1:
+            return results     # list
+
+        return None
+
+    except Exception as e:
+        print("ERROR DATABASE:", e)
+        return None
 
 # ================= TOMBOL SCAN =================
 
