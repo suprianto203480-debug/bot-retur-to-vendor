@@ -11,30 +11,24 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
-
 def cari_produk_by_upc(upc):
+    """Cari produk berdasarkan UPC (eksak)"""
     try:
         conn = get_connection()
         cur = conn.cursor()
-
         cur.execute("""
             SELECT sku, item_desc, unit_retail, soh, upc
             FROM produk_master
-            WHERE upc::text = %s
+            WHERE upc = %s
             LIMIT 1
         """, (upc,))
-
         data = cur.fetchone()
-
         cur.close()
         conn.close()
-
         return data
-
     except Exception as e:
-        print("ERROR DATABASE UPC:", e)
+        print("ERROR DATABASE (UPC):", e)
         return None
-
 
 def cari_produk_by_keyword(keyword):
     try:
@@ -65,17 +59,16 @@ def cari_produk_by_keyword(keyword):
         conn.close()
 
         if len(results) == 1:
-            return results[0]
+            return results[0]  # tuple
 
         if len(results) > 1:
-            return results
+            return results     # list
 
         return None
 
     except Exception as e:
-        print("ERROR DATABASE SEARCH:", e)
+        print("ERROR DATABASE:", e)
         return None
-
 
 # ================= TOMBOL SCAN =================
 
@@ -90,77 +83,37 @@ def tombol_scan():
     ]]
     return InlineKeyboardMarkup(keyboard)
 
-
-# ================= COMMAND =================
+# ================= HANDLER PERINTAH =================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    teks = (
-        "🤖 *BOT SCANNER PRODUK*\n\n"
-        "Gunakan:\n"
-        "/scan → Scan barcode\n"
-        "/cari <nama / sku / upc>\n"
-        "/help → bantuan"
-    )
-
     await update.message.reply_text(
-        teks,
-        parse_mode="Markdown",
+        "🤖 Bot Retur Vendor Aktif\n\nKlik tombol untuk scan barcode:",
         reply_markup=tombol_scan()
     )
-
 
 async def scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     await update.message.reply_text(
-        "📷 Silakan scan barcode produk",
+        "Scan Barcode",
         reply_markup=tombol_scan()
     )
-
-
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    teks = (
-        "*Menu Bot*\n\n"
-        "/scan → Scan barcode\n"
-        "/cari <keyword> → cari produk\n"
-        "/help → bantuan\n\n"
-        "Contoh:\n"
-        "`/cari 8994448860567`\n"
-        "`/cari sarung`\n"
-        "`/cari 91774219`"
-    )
-
-    await update.message.reply_text(
-        teks,
-        parse_mode="Markdown",
-        reply_markup=tombol_scan()
-    )
-
-
-# ================= FITUR CARI =================
 
 async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    if not context.args:
+    args = context.args
+    if not args:
         await update.message.reply_text(
-            "Gunakan:\n/cari <UPC / SKU / Nama Produk>",
+            "Gunakan: /cari <UPC atau nama produk>",
             reply_markup=tombol_scan()
         )
         return
 
-    keyword = " ".join(context.args)
-
+    keyword = ' '.join(args)
     hasil = cari_produk_by_keyword(keyword)
 
     if hasil is None:
-
-        pesan = f"❌ Produk tidak ditemukan\n\nKeyword : {keyword}"
-
+        pesan = f"❌ Produk tidak ditemukan untuk: {keyword}"
     elif isinstance(hasil, tuple):
-
+        # Satu hasil exact
         sku, nama, harga, stok, upc = hasil
-
         pesan = (
             f"📦 *Produk Ditemukan*\n\n"
             f"SKU   : {sku}\n"
@@ -169,24 +122,13 @@ async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Stok  : {stok}\n"
             f"UPC   : `{upc}`"
         )
-
     else:
-
-        pesan = "🔎 *Beberapa produk ditemukan:*\n\n"
-
-        for i, row in enumerate(hasil, start=1):
-
-            sku, nama, harga, stok, upc = row
-
-            pesan += (
-                f"{i}. {nama}\n"
-                f"   SKU : {sku}\n"
-                f"   UPC : `{upc}`\n"
-                f"   Stok: {stok}\n\n"
-            )
-
+        # Banyak hasil dari pencarian deskripsi
+        pesan = "🔍 *Beberapa produk ditemukan:*\n"
+        for idx, (sku, nama, harga, stok, upc) in enumerate(hasil, 1):
+            pesan += f"{idx}. SKU: {sku} - {nama} (UPC: `{upc}`) Stok: {stok}\n"
         if len(hasil) >= 10:
-            pesan += "_Menampilkan maksimal 10 produk_"
+            pesan += "\n*Tampilkan maksimal 10 hasil. Perjelas kata kunci.*"
 
     await update.message.reply_text(
         pesan,
@@ -194,26 +136,29 @@ async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=tombol_scan()
     )
 
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    teks = (
+        "/start - Mulai bot dan tampilkan tombol scan\n"
+        "/scan - Scan barcode produk\n"
+        "/cari <UPC/SKU/deskripsi> - Cari produk berdasarkan SKU/DESC/UPC\n"
+        "/help - Bantuan penggunaan bot"
+    )
+    await update.message.reply_text(teks, reply_markup=tombol_scan())
 
-# ================= WEBAPP BARCODE =================
+# ================= TERIMA DATA DARI WEB APP =================
 
 async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     message = update.effective_message
-
     if not message.web_app_data:
         return
 
     barcode = message.web_app_data.data.strip()
-
-    print("BARCODE:", barcode)
+    print("BARCODE MASUK:", barcode)
 
     produk = cari_produk_by_upc(barcode)
 
     if produk:
-
         sku, nama, harga, stok, upc = produk
-
         pesan = (
             f"📦 *Produk Ditemukan*\n\n"
             f"SKU   : {sku}\n"
@@ -222,9 +167,7 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Stok  : {stok}\n"
             f"UPC   : `{upc}`"
         )
-
     else:
-
         pesan = f"❌ Produk tidak ditemukan\n\nUPC : `{barcode}`"
 
     await message.reply_text(
@@ -232,30 +175,67 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
         reply_markup=tombol_scan()
     )
+async def cari_otomatis(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    keyword = update.message.text.strip()
+
+    hasil = cari_produk_by_keyword(keyword)
+
+    if hasil is None:
+        return
+
+    if isinstance(hasil, tuple):
+
+        sku, nama, harga, stok, upc = hasil
+
+        pesan = (
+            f"📦 Produk Ditemukan\n\n"
+            f"SKU : {sku}\n"
+            f"Nama : {nama}\n"
+            f"Harga : Rp {harga:,.0f}\n"
+            f"Stok : {stok}\n"
+            f"UPC : {upc}"
+        )
+
+    else:
+
+        pesan = "🔎 Beberapa produk ditemukan\n\n"
+
+        for i, row in enumerate(hasil, start=1):
+            sku, nama, harga, stok, upc = row
+            pesan += f"{i}. {nama} (SKU:{sku})\n"
+
+    await update.message.reply_text(pesan)
 
 # ================= MAIN =================
 
 def main():
+ app = ApplicationBuilder().token(TOKEN).build()
 
-    app = ApplicationBuilder().token(TOKEN).build()
+# COMMAND
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("scan", scan))
+app.add_handler(CommandHandler("cari", cari))
+app.add_handler(CommandHandler("help", help_command))
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("scan", scan))
-    app.add_handler(CommandHandler("cari", cari))
-    app.add_handler(CommandHandler("help", help_command))
-
-    app.add_handler(
-        MessageHandler(
-            filters.StatusUpdate.WEB_APP_DATA,
-            webapp_handler
-        )
+# WEBAPP BARCODE
+app.add_handler(
+    MessageHandler(
+        filters.StatusUpdate.WEB_APP_DATA,
+        webapp_handler
     )
+)
 
-    print("✅ BOT SCANNER PRODUK AKTIF")
+# PENCARIAN OTOMATIS (HARUS PALING BAWAH)
+app.add_handler(
+    MessageHandler(
+        filters.TEXT & ~filters.COMMAND,
+        cari_otomatis
+    )
+)
 
-    app.run_polling()
-
+print("✅ BOT SCANNER AKTIF (dengan menu lengkap dan pencarian SKU)")
+app.run_polling()
 
 if __name__ == "__main__":
     main()
