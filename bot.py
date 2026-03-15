@@ -7,7 +7,6 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-
 # ================= DATABASE =================
 
 def get_connection():
@@ -21,10 +20,10 @@ def cari_produk(upc):
         cur = conn.cursor()
 
         cur.execute("""
-        SELECT item_desc, unit_retail, soh
-        FROM produk_master
-        WHERE TRIM(upc) = %s
-        LIMIT 1
+            SELECT item_desc, unit_retail, soh
+            FROM produk_master
+            WHERE upc = %s
+            LIMIT 1
         """, (upc,))
 
         data = cur.fetchone()
@@ -35,35 +34,11 @@ def cari_produk(upc):
         return data
 
     except Exception as e:
-        print("ERROR DB:", e)
+        print("ERROR DATABASE:", e)
         return None
 
 
-# ================= FORMAT HASIL =================
-
-def format_produk(barcode, produk):
-
-    if produk:
-
-        nama, harga, stok = produk
-
-        return (
-            f"📦 Produk Ditemukan\n\n"
-            f"Nama  : {nama}\n"
-            f"Harga : Rp {harga:,.0f}\n"
-            f"Stok  : {stok}\n"
-            f"UPC   : {barcode}"
-        )
-
-    else:
-
-        return (
-            f"❌ Produk tidak ditemukan\n\n"
-            f"UPC : {barcode}"
-        )
-
-
-# ================= TOMBOL =================
+# ================= TOMBOL SCAN =================
 
 def tombol_scan():
 
@@ -84,47 +59,48 @@ def tombol_scan():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
-        "🤖 Bot Retur Vendor Aktif\n\n"
-        "Kirim UPC barcode atau gunakan tombol scan.",
+        "🤖 Bot Retur Vendor Aktif\n\nKlik tombol untuk scan barcode:",
         reply_markup=tombol_scan()
     )
 
 
-# ================= CARI COMMAND =================
+# ================= TERIMA DATA SCANNER =================
 
-async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    if len(context.args) == 0:
+    message = update.effective_message
 
-        await update.message.reply_text(
-            "Gunakan:\n/cari 8995077600135"
-        )
+    if not message.web_app_data:
         return
 
-    barcode = context.args[0]
+    barcode = message.web_app_data.data.strip()
+
+    print("BARCODE MASUK:", barcode)
 
     produk = cari_produk(barcode)
 
-    pesan = format_produk(barcode, produk)
+    if produk:
 
-    await update.message.reply_text(pesan)
+        nama, harga, stok = produk
 
+        pesan = (
+            f"📦 *Produk Ditemukan*\n\n"
+            f"Nama  : {nama}\n"
+            f"Harga : Rp {harga:,.0f}\n"
+            f"Stok  : {stok}\n"
+            f"UPC   : `{barcode}`"
+        )
 
-# ================= HANDLE TEXT =================
+    else:
 
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        pesan = (
+            f"❌ Produk tidak ditemukan\n\n"
+            f"UPC : `{barcode}`"
+        )
 
-    text = update.message.text.strip()
-
-    if not text.isdigit():
-        return
-
-    produk = cari_produk(text)
-
-    pesan = format_produk(text, produk)
-
-    await update.message.reply_text(
+    await message.reply_text(
         pesan,
+        parse_mode="Markdown",
         reply_markup=tombol_scan()
     )
 
@@ -133,19 +109,18 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
 
-    print("BOT RETUR VENDOR AKTIF")
-
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("cari", cari))
 
     app.add_handler(
         MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            handle_text
+            filters.StatusUpdate.WEB_APP_DATA,
+            webapp_handler
         )
     )
+
+    print("✅ BOT SCANNER AKTIF")
 
     app.run_polling()
 
