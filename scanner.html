@@ -11,14 +11,14 @@
 body{
 font-family:Arial;
 text-align:center;
-padding:10px;
+padding:15px;
 margin:0;
 background:#f5f5f5;
 }
 
 #reader{
 width:100%;
-max-width:380px;
+max-width:350px;
 margin:auto;
 }
 
@@ -37,56 +37,44 @@ margin-top:10px;
 <div id="reader"></div>
 
 <p>Hasil Scan:</p>
-<h3 id="hasil">Menyalakan kamera...</h3>
+<h3 id="hasil">-</h3>
 
 <script>
 
 const tg = window.Telegram.WebApp;
-tg.ready();
 tg.expand();
 
 const hasil = document.getElementById("hasil");
 
-const scanner = new Html5Qrcode("reader");
+const html5QrCode = new Html5Qrcode("reader");
 
-scanner.start(
-{ facingMode: "environment" },
+html5QrCode.start(
+{ facingMode: "environment" },   // langsung kamera belakang
 {
-fps: 15,
-qrbox: 280
+fps: 10,
+qrbox: { width: 250, height: 250 }
 },
-(barcode)=>{
+(decodedText)=>{
 
-console.log("BARCODE:", barcode);
+hasil.innerText = decodedText;
 
-hasil.innerText = barcode;
+/* kirim ke bot */
+tg.sendData(decodedText);
 
-if(navigator.vibrate){
-navigator.vibrate(200);
-}
+/* stop kamera */
+html5QrCode.stop();
 
-try{
-
-tg.sendData(barcode);
-
-console.log("DATA DIKIRIM KE BOT");
-
-}catch(e){
-
-console.log("ERROR SEND DATA", e);
-
-}
-
-scanner.stop();
-
+/* tutup webapp */
 setTimeout(()=>{
 tg.close();
 },500);
 
 },
-(error)=>{}
+(errorMessage)=>{
+// abaikan error scan kecil
+}
 ).catch(err=>{
-hasil.innerText="❌ Kamera gagal dibuka";
+hasil.innerText="Tidak bisa akses kamera";
 console.log(err);
 });
 
