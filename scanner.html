@@ -13,7 +13,6 @@ font-family:Arial;
 text-align:center;
 padding:20px;
 }
-
 #reader{
 width:300px;
 margin:auto;
@@ -28,6 +27,7 @@ margin:auto;
 
 <div id="reader"></div>
 
+<p>Hasil Scan:</p>
 <h3 id="hasil">-</h3>
 
 <script>
@@ -35,26 +35,25 @@ margin:auto;
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-let lastCode="";
-
 function onScanSuccess(decodedText){
 
-if(decodedText===lastCode) return;
+document.getElementById("hasil").innerText = decodedText;
 
-lastCode=decodedText;
-
-document.getElementById("hasil").innerText=decodedText;
-
+/* kirim barcode ke bot */
 tg.sendData(decodedText);
+
+/* tutup scanner */
+setTimeout(function(){
+tg.close();
+},500);
 
 }
 
 const scanner = new Html5QrcodeScanner(
 "reader",
 {
-fps:20,
-qrbox:250,
-rememberLastUsedCamera:true
+fps:10,
+qrbox:250
 }
 );
 
@@ -64,3 +63,4 @@ scanner.render(onScanSuccess);
 
 </body>
 </html>
+
