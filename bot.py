@@ -17,7 +17,7 @@ def cari_produk_by_upc(upc):
         conn = get_connection()
         cur = conn.cursor()
         cur.execute("""
-            SELECT item_desc, unit_retail, soh, upc
+            SELECT sku, item_desc, unit_retail, soh, upc
             FROM produk_master
             WHERE upc = %s
             LIMIT 1
@@ -31,31 +31,51 @@ def cari_produk_by_upc(upc):
         return None
 
 def cari_produk_by_keyword(keyword):
-    """Cari produk: pertama exact UPC, lalu LIKE deskripsi"""
+    """
+    Cari produk:
+    1. Exact match di UPC
+    2. Exact match di SKU
+    3. Partial match (ILIKE) di item_desc (bisa juga di SKU/UPC jika perlu, tapi kita batasi di desc)
+    Mengembalikan tuple jika exact, list of tuples jika banyak, None jika tidak ada.
+    """
     try:
         conn = get_connection()
         cur = conn.cursor()
+
         # 1. Exact UPC
         cur.execute("""
-            SELECT item_desc, unit_retail, soh, upc
+            SELECT sku, item_desc, unit_retail, soh, upc
             FROM produk_master
             WHERE upc = %s
             LIMIT 1
         """, (keyword,))
         data = cur.fetchone()
         if data:
-            return data  # tuple tunggal
+            return data  # tuple
 
-        # 2. Pencarian deskripsi (case-insensitive, partial)
+        # 2. Exact SKU
         cur.execute("""
-            SELECT item_desc, unit_retail, soh, upc
+            SELECT sku, item_desc, unit_retail, soh, upc
+            FROM produk_master
+            WHERE sku = %s
+            LIMIT 1
+        """, (keyword,))
+        data = cur.fetchone()
+        if data:
+            return data
+
+        # 3. Partial di deskripsi (dan mungkin juga di SKU/UPC? Tapi biasanya deskripsi)
+        # Kita cari di item_desc, bisa juga ditambahkan sku dan upc jika ingin
+        cur.execute("""
+            SELECT sku, item_desc, unit_retail, soh, upc
             FROM produk_master
             WHERE item_desc ILIKE %s
-            LIMIT 5
+            LIMIT 10
         """, (f'%{keyword}%',))
         results = cur.fetchall()
         if results:
             return results  # list of tuples
+
         return None
     except Exception as e:
         print("ERROR DATABASE (keyword):", e)
@@ -107,9 +127,10 @@ async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pesan = f"❌ Produk tidak ditemukan untuk: {keyword}"
     elif isinstance(hasil, tuple):
         # Satu hasil exact
-        nama, harga, stok, upc = hasil
+        sku, nama, harga, stok, upc = hasil
         pesan = (
             f"📦 *Produk Ditemukan*\n\n"
+            f"SKU   : {sku}\n"
             f"Nama  : {nama}\n"
             f"Harga : Rp {harga:,.0f}\n"
             f"Stok  : {stok}\n"
@@ -118,8 +139,10 @@ async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         # Banyak hasil dari pencarian deskripsi
         pesan = "🔍 *Beberapa produk ditemukan:*\n"
-        for idx, (nama, harga, stok, upc) in enumerate(hasil, 1):
-            pesan += f"{idx}. {nama} (UPC: `{upc}`) - Stok: {stok}\n"
+        for idx, (sku, nama, harga, stok, upc) in enumerate(hasil, 1):
+            pesan += f"{idx}. SKU: {sku} - {nama} (UPC: `{upc}`) Stok: {stok}\n"
+        if len(hasil) >= 10:
+            pesan += "\n*Tampilkan maksimal 10 hasil. Perjelas kata kunci.*"
 
     await update.message.reply_text(
         pesan,
@@ -131,7 +154,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teks = (
         "/start - Mulai bot dan tampilkan tombol scan\n"
         "/scan - Scan barcode produk\n"
-        "/cari <UPC/deskripsi> - Cari produk berdasarkan SKU/DESC/UPC\n"
+        "/cari <UPC/SKU/deskripsi> - Cari produk berdasarkan SKU/DESC/UPC\n"
         "/help - Bantuan penggunaan bot"
     )
     await update.message.reply_text(teks, reply_markup=tombol_scan())
@@ -149,9 +172,10 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     produk = cari_produk_by_upc(barcode)
 
     if produk:
-        nama, harga, stok, upc = produk
+        sku, nama, harga, stok, upc = produk
         pesan = (
             f"📦 *Produk Ditemukan*\n\n"
+            f"SKU   : {sku}\n"
             f"Nama  : {nama}\n"
             f"Harga : Rp {harga:,.0f}\n"
             f"Stok  : {stok}\n"
@@ -182,7 +206,7 @@ def main():
         )
     )
 
-    print("✅ BOT SCANNER AKTIF (dengan menu lengkap)")
+    print("✅ BOT SCANNER AKTIF (dengan menu lengkap dan pencarian SKU)")
     app.run_polling()
 
 if __name__ == "__main__":
