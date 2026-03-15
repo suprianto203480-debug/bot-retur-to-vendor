@@ -1,8 +1,20 @@
 import os
 import psycopg2
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    WebAppInfo
+)
+
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters
+)
 
 TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -14,119 +26,201 @@ def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 
-def cari_produk(upc):
+# ================= CARI UPC =================
 
-    try:
-        conn = get_connection()
-        cur = conn.cursor()
+def cari_upc(upc):
 
-        cur.execute("""
-        SELECT item_desc, unit_retail, soh
-        FROM produk_master
-        WHERE TRIM(upc) = %s
-        LIMIT 1
-        """, (upc,))
+    conn = get_connection()
+    cur = conn.cursor()
 
-        data = cur.fetchone()
+    cur.execute("""
+    SELECT sku,item_desc,unit_retail,soh
+    FROM produk_master
+    WHERE TRIM(upc)=%s
+    LIMIT 1
+    """,(upc,))
 
-        cur.close()
-        conn.close()
+    data = cur.fetchone()
 
-        return data
+    cur.close()
+    conn.close()
 
-    except Exception as e:
-        print("ERROR DB:", e)
-        return None
+    return data
 
 
-# ================= FORMAT HASIL =================
+# ================= CARI SKU =================
 
-def format_produk(barcode, produk):
+def cari_sku(sku):
 
-    if produk:
+    conn = get_connection()
+    cur = conn.cursor()
 
-        nama, harga, stok = produk
+    cur.execute("""
+    SELECT item_desc,unit_retail,soh,upc
+    FROM produk_master
+    WHERE sku=%s
+    LIMIT 1
+    """,(sku,))
 
-        return (
-            f"📦 Produk Ditemukan\n\n"
-            f"Nama  : {nama}\n"
-            f"Harga : Rp {harga:,.0f}\n"
-            f"Stok  : {stok}\n"
-            f"UPC   : {barcode}"
-        )
+    data = cur.fetchone()
 
-    else:
+    cur.close()
+    conn.close()
 
-        return (
-            f"❌ Produk tidak ditemukan\n\n"
-            f"UPC : {barcode}"
-        )
+    return data
 
 
-# ================= TOMBOL =================
+# ================= CARI NAMA =================
+
+def cari_nama(keyword):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+    SELECT sku,item_desc,unit_retail,soh,upc
+    FROM produk_master
+    WHERE item_desc ILIKE %s
+    LIMIT 10
+    """,(f"%{keyword}%",))
+
+    data = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return data
+
+
+# ================= TOMBOL SCAN =================
 
 def tombol_scan():
 
-    keyboard = [[
-        InlineKeyboardButton(
-            "📷 Scan Barcode",
-            web_app=WebAppInfo(
-                url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
-            )
+    keyboard=[[InlineKeyboardButton(
+        "📷 Scan Barcode",
+        web_app=WebAppInfo(
+            url="https://USERNAME.github.io/scanner.html"
         )
-    ]]
+    )]]
 
     return InlineKeyboardMarkup(keyboard)
 
 
 # ================= START =================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update:Update,context:ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "🤖 Bot Retur Vendor Aktif\n\n"
-        "Kirim UPC barcode atau gunakan tombol scan.",
+        "Kirim UPC barcode\n"
+        "atau gunakan tombol scan",
         reply_markup=tombol_scan()
     )
 
 
-# ================= CARI COMMAND =================
+# ================= CARI UPC =================
 
-async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_barcode(update:Update,context:ContextTypes.DEFAULT_TYPE):
 
-    if len(context.args) == 0:
+    barcode=update.message.text.strip()
+
+    if not barcode.isdigit():
+        return
+
+    produk=cari_upc(barcode)
+
+    if produk:
+
+        sku,nama,harga,stok=produk
+
+        text=(
+        f"📦 Produk Ditemukan\n\n"
+        f"Nama : {nama}\n"
+        f"SKU : {sku}\n"
+        f"Harga : Rp {harga:,.0f}\n"
+        f"Stok : {stok}\n"
+        f"UPC : {barcode}"
+        )
+
+    else:
+
+        text=(
+        f"❌ Produk tidak ditemukan\n\n"
+        f"UPC : {barcode}"
+        )
+
+    await update.message.reply_text(text,reply_markup=tombol_scan())
+
+
+# ================= COMMAND SKU =================
+
+async def sku(update:Update,context:ContextTypes.DEFAULT_TYPE):
+
+    if len(context.args)==0:
 
         await update.message.reply_text(
-            "Gunakan:\n/cari 8995077600135"
+        "Gunakan:\n/sku 91774219"
         )
         return
 
-    barcode = context.args[0]
+    kode=context.args[0]
 
-    produk = cari_produk(barcode)
+    produk=cari_sku(kode)
 
-    pesan = format_produk(barcode, produk)
+    if produk:
 
-    await update.message.reply_text(pesan)
+        nama,harga,stok,upc=produk
+
+        text=(
+        f"📦 Produk Ditemukan\n\n"
+        f"Nama : {nama}\n"
+        f"SKU : {kode}\n"
+        f"Harga : Rp {harga:,.0f}\n"
+        f"Stok : {stok}\n"
+        f"UPC : {upc}"
+        )
+
+    else:
+
+        text="Produk tidak ditemukan"
+
+    await update.message.reply_text(text)
 
 
-# ================= HANDLE TEXT =================
+# ================= COMMAND NAMA =================
 
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def nama(update:Update,context:ContextTypes.DEFAULT_TYPE):
 
-    text = update.message.text.strip()
+    if len(context.args)==0:
 
-    if not text.isdigit():
+        await update.message.reply_text(
+        "Gunakan:\n/nama kacang"
+        )
         return
 
-    produk = cari_produk(text)
+    keyword=" ".join(context.args)
 
-    pesan = format_produk(text, produk)
+    hasil=cari_nama(keyword)
 
-    await update.message.reply_text(
-        pesan,
-        reply_markup=tombol_scan()
-    )
+    if not hasil:
+
+        await update.message.reply_text(
+        "Produk tidak ditemukan"
+        )
+        return
+
+    text="🔎 Hasil pencarian:\n\n"
+
+    for sku,nama,harga,stok,upc in hasil:
+
+        text+=(
+        f"{nama}\n"
+        f"SKU : {sku}\n"
+        f"Harga : Rp {harga:,.0f}\n"
+        f"UPC : {upc}\n\n"
+        )
+
+    await update.message.reply_text(text)
 
 
 # ================= MAIN =================
@@ -135,20 +229,21 @@ def main():
 
     print("BOT RETUR VENDOR AKTIF")
 
-    app = ApplicationBuilder().token(TOKEN).build()
+    app=ApplicationBuilder().token(TOKEN).build()
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("cari", cari))
+    app.add_handler(CommandHandler("start",start))
+    app.add_handler(CommandHandler("sku",sku))
+    app.add_handler(CommandHandler("nama",nama))
 
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
-            handle_text
+            handle_barcode
         )
     )
 
     app.run_polling()
 
 
-if __name__ == "__main__":
+if __name__=="__main__":
     main()
