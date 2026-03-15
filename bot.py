@@ -279,17 +279,24 @@ async def cari_otomatis(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     else:
 
-        pesan = "Beberapa produk ditemukan\n\n"
+    pesan = ""
 
-        for i, row in enumerate(hasil, start=1):
+    for i, row in enumerate(hasil, start=1):
 
-            sku, desc, upc, vendor_dc, supplier_dc, vendor_lokal, supplier_lokal, inner = row
+        sku, desc, upc, vendor_dc, supplier_dc, vendor_lokal, supplier_lokal, inner = row
 
-            pesan += (
-                f"{i}. {desc}\n"
-                f"SKU : {sku}\n"
-                f"UPC : {upc}\n\n"
-            )
+        pesan += (
+            f"HASIL {i}\n\n"
+            f"SKU : {sku}\n"
+            f"DESC : {desc}\n"
+            f"UPC : {upc}\n\n"
+            f"VENDOR DC : {vendor_dc}\n"
+            f"SUPPLIER DC : {supplier_dc}\n\n"
+            f"VENDOR LOKAL : {vendor_lokal}\n"
+            f"SUPPLIER LOKAL : {supplier_lokal}\n\n"
+            f"INNER : {inner}\n\n"
+            f"-----------------------------\n\n"
+        )
 
     await update.message.reply_text(pesan)
 
