@@ -224,6 +224,9 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     barcode = message.web_app_data.data.strip()
 
+    # DEBUG untuk melihat apakah barcode diterima bot
+    print("SCAN DATA:", barcode)
+
     produk = cari_produk_by_upc(barcode)
 
     if produk:
