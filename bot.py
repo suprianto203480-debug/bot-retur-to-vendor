@@ -210,32 +210,35 @@ async def cari_otomatis(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================= MAIN =================
 
 def main():
- app = ApplicationBuilder().token(TOKEN).build()
 
-# COMMAND
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("scan", scan))
-app.add_handler(CommandHandler("cari", cari))
-app.add_handler(CommandHandler("help", help_command))
+    app = ApplicationBuilder().token(TOKEN).build()
 
-# WEBAPP BARCODE
-app.add_handler(
-    MessageHandler(
-        filters.StatusUpdate.WEB_APP_DATA,
-        webapp_handler
+    # COMMAND
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("scan", scan))
+    app.add_handler(CommandHandler("cari", cari))
+    app.add_handler(CommandHandler("help", help_command))
+
+    # WEBAPP BARCODE
+    app.add_handler(
+        MessageHandler(
+            filters.StatusUpdate.WEB_APP_DATA,
+            webapp_handler
+        )
     )
-)
 
-# PENCARIAN OTOMATIS (HARUS PALING BAWAH)
-app.add_handler(
-    MessageHandler(
-        filters.TEXT & ~filters.COMMAND,
-        cari_otomatis
+    # PENCARIAN OTOMATIS (PALING BAWAH)
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            cari_otomatis
+        )
     )
-)
 
-print("✅ BOT SCANNER AKTIF (dengan menu lengkap dan pencarian SKU)")
-app.run_polling()
+    print("✅ BOT SCANNER AKTIF (dengan menu lengkap dan pencarian SKU)")
+
+    app.run_polling()
+
 
 if __name__ == "__main__":
     main()
