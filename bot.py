@@ -216,25 +216,27 @@ async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================= SCAN BARCODE =================
 
 async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
     try:
+
         message = update.effective_message
 
         if message is None:
-            print("WEBAPP DEBUG: message None")
+            print("DEBUG: message None")
             return
 
         if not message.web_app_data:
-            print("WEBAPP DEBUG: tidak ada web_app_data")
+            print("DEBUG: web_app_data kosong")
             return
 
         barcode = message.web_app_data.data.strip()
 
-        # DEBUG: cek apakah data dari WebApp masuk
         print("SCAN DATA:", barcode)
 
         produk = cari_produk_by_upc(barcode)
 
         if produk:
+
             sku, desc, upc, vendor_dc, supplier_dc, vendor_lokal, supplier_lokal, inner = produk
 
             pesan = (
@@ -247,7 +249,9 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"SUPPLIER LOKAL : {supplier_lokal}\n\n"
                 f"INNER : {inner}"
             )
+
         else:
+
             pesan = f"Produk tidak ditemukan\n\nUPC : {barcode}"
 
         await message.reply_text(
@@ -256,8 +260,8 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
     except Exception as e:
-        print("ERROR WEBAPP HANDLER:", e)
 
+        print("ERROR WEBAPP HANDLER:", e)
 
 # ================= PENCARIAN OTOMATIS =================
 
