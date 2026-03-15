@@ -1,39 +1,71 @@
 import os
 import psycopg2
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 TOKEN = os.getenv("BOT_TOKEN")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+
 # ================= DATABASE =================
 
 def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
+
 def cari_produk(upc):
 
-    conn = get_connection()
-    cur = conn.cursor()
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
 
-    cur.execute("""
+        cur.execute("""
         SELECT item_desc, unit_retail, soh
         FROM produk_master
-        WHERE upc = %s
+        WHERE TRIM(upc) = %s
         LIMIT 1
-    """, (upc,))
+        """, (upc,))
 
-    data = cur.fetchone()
+        data = cur.fetchone()
 
-    cur.close()
-    conn.close()
+        cur.close()
+        conn.close()
 
-    return data
+        return data
+
+    except Exception as e:
+        print("ERROR DB:", e)
+        return None
 
 
-# ================= START =================
+# ================= FORMAT HASIL =================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def format_produk(barcode, produk):
+
+    if produk:
+
+        nama, harga, stok = produk
+
+        return (
+            f"📦 Produk Ditemukan\n\n"
+            f"Nama  : {nama}\n"
+            f"Harga : Rp {harga:,.0f}\n"
+            f"Stok  : {stok}\n"
+            f"UPC   : {barcode}"
+        )
+
+    else:
+
+        return (
+            f"❌ Produk tidak ditemukan\n\n"
+            f"UPC : {barcode}"
+        )
+
+
+# ================= TOMBOL =================
+
+def tombol_scan():
 
     keyboard = [[
         InlineKeyboardButton(
@@ -44,59 +76,76 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     ]]
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    return InlineKeyboardMarkup(keyboard)
+
+
+# ================= START =================
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
-        "Bot Retur Vendor Aktif\n\nKlik tombol untuk scan barcode:",
-        reply_markup=reply_markup
+        "🤖 Bot Retur Vendor Aktif\n\n"
+        "Kirim UPC barcode atau gunakan tombol scan.",
+        reply_markup=tombol_scan()
     )
 
 
-# ================= TERIMA DATA SCANNER =================
+# ================= CARI COMMAND =================
 
-async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    if not update.effective_message.web_app_data:
+    if len(context.args) == 0:
+
+        await update.message.reply_text(
+            "Gunakan:\n/cari 8995077600135"
+        )
         return
 
-    barcode = update.effective_message.web_app_data.data
+    barcode = context.args[0]
 
     produk = cari_produk(barcode)
 
-    if produk:
-
-        nama, harga, stok = produk
-
-        pesan = (
-            f"📦 Produk : {nama}\n"
-            f"💰 Harga  : Rp {harga}\n"
-            f"📊 Stok   : {stok}\n"
-            f"🔎 UPC    : {barcode}"
-        )
-
-    else:
-
-        pesan = f"❌ Produk tidak ditemukan\nUPC: {barcode}"
+    pesan = format_produk(barcode, produk)
 
     await update.message.reply_text(pesan)
+
+
+# ================= HANDLE TEXT =================
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    text = update.message.text.strip()
+
+    if not text.isdigit():
+        return
+
+    produk = cari_produk(text)
+
+    pesan = format_produk(text, produk)
+
+    await update.message.reply_text(
+        pesan,
+        reply_markup=tombol_scan()
+    )
 
 
 # ================= MAIN =================
 
 def main():
 
+    print("BOT RETUR VENDOR AKTIF")
+
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("cari", cari))
 
     app.add_handler(
         MessageHandler(
-            filters.StatusUpdate.WEB_APP_DATA,
-            webapp_handler
+            filters.TEXT & ~filters.COMMAND,
+            handle_text
         )
     )
-
-    print("✅ BOT SCANNER AKTIF")
 
     app.run_polling()
 
