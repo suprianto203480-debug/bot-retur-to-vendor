@@ -35,11 +35,35 @@ def cari_produk(upc):
         return data
 
     except Exception as e:
-        print("ERROR DATABASE:", e)
+        print("ERROR DB:", e)
         return None
 
 
-# ================= TOMBOL SCAN =================
+# ================= FORMAT HASIL =================
+
+def format_produk(barcode, produk):
+
+    if produk:
+
+        nama, harga, stok = produk
+
+        return (
+            f"📦 Produk Ditemukan\n\n"
+            f"Nama  : {nama}\n"
+            f"Harga : Rp {harga:,.0f}\n"
+            f"Stok  : {stok}\n"
+            f"UPC   : {barcode}"
+        )
+
+    else:
+
+        return (
+            f"❌ Produk tidak ditemukan\n\n"
+            f"UPC : {barcode}"
+        )
+
+
+# ================= TOMBOL =================
 
 def tombol_scan():
 
@@ -55,80 +79,52 @@ def tombol_scan():
     return InlineKeyboardMarkup(keyboard)
 
 
-# ================= FORMAT HASIL =================
-
-def format_produk(barcode, produk):
-
-    if produk:
-        nama, harga, stok = produk
-
-        return (
-            f"📦 *Produk Ditemukan*\n\n"
-            f"Nama  : {nama}\n"
-            f"Harga : Rp {harga:,.0f}\n"
-            f"Stok  : {stok}\n"
-            f"UPC   : `{barcode}`"
-        )
-
-    else:
-        return (
-            f"❌ *Produk tidak ditemukan*\n\n"
-            f"UPC : `{barcode}`"
-        )
-
-
 # ================= START =================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
-        "🤖 Bot Retur Vendor Aktif\n\nKlik tombol untuk scan barcode:",
+        "🤖 Bot Retur Vendor Aktif\n\n"
+        "Kirim UPC barcode atau gunakan tombol scan.",
         reply_markup=tombol_scan()
     )
 
 
-# ================= HANDLER WEBAPP =================
+# ================= CARI COMMAND =================
 
-async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    message = update.effective_message
+    if len(context.args) == 0:
 
-    if message.web_app_data is None:
+        await update.message.reply_text(
+            "Gunakan:\n/cari 8995077600135"
+        )
         return
 
-    barcode = message.web_app_data.data.strip()
-
-    print("SCAN WEBAPP:", barcode)
+    barcode = context.args[0]
 
     produk = cari_produk(barcode)
 
     pesan = format_produk(barcode, produk)
 
-    await message.reply_text(
-        pesan,
-        parse_mode="Markdown",
-        reply_markup=tombol_scan()
-    )
+    await update.message.reply_text(pesan)
 
 
-# ================= HANDLER TEXT (CADANGAN) =================
+# ================= HANDLE TEXT =================
 
-async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    barcode = update.message.text.strip()
+    text = update.message.text.strip()
 
-    if not barcode.isdigit():
+    if not text.isdigit():
         return
 
-    print("SCAN TEXT:", barcode)
+    produk = cari_produk(text)
 
-    produk = cari_produk(barcode)
-
-    pesan = format_produk(barcode, produk)
+    pesan = format_produk(text, produk)
 
     await update.message.reply_text(
         pesan,
-        parse_mode="Markdown",
         reply_markup=tombol_scan()
     )
 
@@ -142,20 +138,12 @@ def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("cari", cari))
 
-    # scanner webapp
-    app.add_handler(
-        MessageHandler(
-            filters.StatusUpdate.WEB_APP_DATA,
-            webapp_handler
-        )
-    )
-
-    # input manual barcode
     app.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
-            text_handler
+            handle_text
         )
     )
 
