@@ -17,18 +17,16 @@ def get_connection():
 def cari_produk(upc):
 
     try:
-
         conn = get_connection()
         cur = conn.cursor()
 
-        query = """
+        cur.execute("""
         SELECT item_desc, unit_retail, soh
         FROM produk_master
         WHERE TRIM(upc) = %s
         LIMIT 1
-        """
+        """, (upc,))
 
-        cur.execute(query, (upc,))
         data = cur.fetchone()
 
         cur.close()
@@ -37,8 +35,7 @@ def cari_produk(upc):
         return data
 
     except Exception as e:
-
-        print("ERROR DATABASE :", e)
+        print("ERROR DATABASE:", e)
         return None
 
 
@@ -46,18 +43,38 @@ def cari_produk(upc):
 
 def tombol_scan():
 
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📷 Scan Barcode",
-                web_app=WebAppInfo(
-                    url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
-                )
+    keyboard = [[
+        InlineKeyboardButton(
+            "📷 Scan Barcode",
+            web_app=WebAppInfo(
+                url="https://suprianto203480-debug.github.io/bot-retur-to-vendor/scanner.html"
             )
-        ]
-    ]
+        )
+    ]]
 
     return InlineKeyboardMarkup(keyboard)
+
+
+# ================= FORMAT HASIL =================
+
+def format_produk(barcode, produk):
+
+    if produk:
+        nama, harga, stok = produk
+
+        return (
+            f"📦 *Produk Ditemukan*\n\n"
+            f"Nama  : {nama}\n"
+            f"Harga : Rp {harga:,.0f}\n"
+            f"Stok  : {stok}\n"
+            f"UPC   : `{barcode}`"
+        )
+
+    else:
+        return (
+            f"❌ *Produk tidak ditemukan*\n\n"
+            f"UPC : `{barcode}`"
+        )
 
 
 # ================= START =================
@@ -70,42 +87,46 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-# ================= TERIMA DATA SCANNER =================
+# ================= HANDLER WEBAPP =================
 
 async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     message = update.effective_message
 
     if message.web_app_data is None:
-        print("Tidak ada data WebApp")
         return
 
     barcode = message.web_app_data.data.strip()
 
-    print("BARCODE MASUK :", barcode)
+    print("SCAN WEBAPP:", barcode)
 
     produk = cari_produk(barcode)
 
-    if produk:
-
-        nama, harga, stok = produk
-
-        pesan = (
-            f"📦 *Produk Ditemukan*\n\n"
-            f"Nama  : {nama}\n"
-            f"Harga : Rp {harga:,.0f}\n"
-            f"Stok  : {stok}\n"
-            f"UPC   : `{barcode}`"
-        )
-
-    else:
-
-        pesan = (
-            f"❌ *Produk tidak ditemukan*\n\n"
-            f"UPC : `{barcode}`"
-        )
+    pesan = format_produk(barcode, produk)
 
     await message.reply_text(
+        pesan,
+        parse_mode="Markdown",
+        reply_markup=tombol_scan()
+    )
+
+
+# ================= HANDLER TEXT (CADANGAN) =================
+
+async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    barcode = update.message.text.strip()
+
+    if not barcode.isdigit():
+        return
+
+    print("SCAN TEXT:", barcode)
+
+    produk = cari_produk(barcode)
+
+    pesan = format_produk(barcode, produk)
+
+    await update.message.reply_text(
         pesan,
         parse_mode="Markdown",
         reply_markup=tombol_scan()
@@ -116,17 +137,25 @@ async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
 
-    print("✅ BOT SCANNER AKTIF")
+    print("BOT RETUR VENDOR AKTIF")
 
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
 
-    # handler khusus data dari scanner
+    # scanner webapp
     app.add_handler(
         MessageHandler(
             filters.StatusUpdate.WEB_APP_DATA,
             webapp_handler
+        )
+    )
+
+    # input manual barcode
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            text_handler
         )
     )
 
