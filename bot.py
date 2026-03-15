@@ -216,42 +216,47 @@ async def cari(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================= SCAN BARCODE =================
 
 async def webapp_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        message = update.effective_message
 
-    message = update.effective_message
+        if message is None:
+            print("WEBAPP DEBUG: message None")
+            return
 
-    if not message.web_app_data:
-        return
+        if not message.web_app_data:
+            print("WEBAPP DEBUG: tidak ada web_app_data")
+            return
 
-    barcode = message.web_app_data.data.strip()
+        barcode = message.web_app_data.data.strip()
 
-    # DEBUG untuk melihat apakah barcode diterima bot
-    print("SCAN DATA:", barcode)
+        # DEBUG: cek apakah data dari WebApp masuk
+        print("SCAN DATA:", barcode)
 
-    produk = cari_produk_by_upc(barcode)
+        produk = cari_produk_by_upc(barcode)
 
-    if produk:
+        if produk:
+            sku, desc, upc, vendor_dc, supplier_dc, vendor_lokal, supplier_lokal, inner = produk
 
-        sku, desc, upc, vendor_dc, supplier_dc, vendor_lokal, supplier_lokal, inner = produk
+            pesan = (
+                f"SKU : {sku}\n"
+                f"DESC : {desc}\n"
+                f"UPC : {upc}\n\n"
+                f"VENDOR DC : {vendor_dc}\n"
+                f"SUPPLIER DC : {supplier_dc}\n\n"
+                f"VENDOR LOKAL : {vendor_lokal}\n"
+                f"SUPPLIER LOKAL : {supplier_lokal}\n\n"
+                f"INNER : {inner}"
+            )
+        else:
+            pesan = f"Produk tidak ditemukan\n\nUPC : {barcode}"
 
-        pesan = (
-            f"SKU : {sku}\n"
-            f"DESC : {desc}\n"
-            f"UPC : {upc}\n\n"
-            f"VENDOR DC : {vendor_dc}\n"
-            f"SUPPLIER DC : {supplier_dc}\n\n"
-            f"VENDOR LOKAL : {vendor_lokal}\n"
-            f"SUPPLIER LOKAL : {supplier_lokal}\n\n"
-            f"INNER : {inner}"
+        await message.reply_text(
+            pesan,
+            reply_markup=tombol_scan()
         )
 
-    else:
-
-        pesan = f"Produk tidak ditemukan\n\nUPC : {barcode}"
-
-    await message.reply_text(
-        pesan,
-        reply_markup=tombol_scan()
-    )
+    except Exception as e:
+        print("ERROR WEBAPP HANDLER:", e)
 
 
 # ================= PENCARIAN OTOMATIS =================
