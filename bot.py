@@ -279,13 +279,13 @@ async def cari_otomatis(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     else:
 
-    pesan = ""
+    hasil_list = []
 
     for i, row in enumerate(hasil, start=1):
 
         sku, desc, upc, vendor_dc, supplier_dc, vendor_lokal, supplier_lokal, inner = row
 
-        pesan += (
+        hasil_list.append(
             f"HASIL {i}\n\n"
             f"SKU : {sku}\n"
             f"DESC : {desc}\n"
@@ -294,12 +294,12 @@ async def cari_otomatis(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"SUPPLIER DC : {supplier_dc}\n\n"
             f"VENDOR LOKAL : {vendor_lokal}\n"
             f"SUPPLIER LOKAL : {supplier_lokal}\n\n"
-            f"INNER : {inner}\n\n"
-            f"-----------------------------\n\n"
+            f"INNER : {inner}\n"
         )
 
-    await update.message.reply_text(pesan)
+    pesan = "\n-----------------------------\n\n".join(hasil_list)
 
+    await update.message.reply_text(pesan)
 
 # ================= MAIN =================
 
