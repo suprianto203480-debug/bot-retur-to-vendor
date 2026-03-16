@@ -1,84 +1,33 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Scanner Barcode</title>
-
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
-
-<style>
-body{
-font-family:Arial;
-text-align:center;
-padding:15px;
-margin:0;
-background:#f5f5f5;
-}
-
-#reader{
-width:100%;
-max-width:350px;
-margin:auto;
-}
-
-#hasil{
-font-size:18px;
-font-weight:bold;
-margin-top:10px;
-}
-</style>
-</head>
-
-<body>
-
-<h2>📷 Scan Barcode</h2>
-
-<div id="reader"></div>
-
-<p>Hasil Scan:</p>
-<h3 id="hasil">-</h3>
-
 <script>
 
 const tg = window.Telegram.WebApp;
+
+/* WAJIB untuk webapp telegram */
+tg.ready();
 tg.expand();
 
-const hasil = document.getElementById("hasil");
+function onScanSuccess(decodedText){
 
-const html5QrCode = new Html5Qrcode("reader");
+document.getElementById("hasil").innerText = decodedText;
 
-html5QrCode.start(
-{ facingMode: "environment" },   // langsung kamera belakang
-{
-fps: 10,
-qrbox: { width: 250, height: 250 }
-},
-(decodedText)=>{
-
-hasil.innerText = decodedText;
-
-/* kirim ke bot */
+/* kirim barcode ke bot */
 tg.sendData(decodedText);
 
-/* stop kamera */
-html5QrCode.stop();
-
-/* tutup webapp */
-setTimeout(()=>{
+/* tutup scanner */
+setTimeout(function(){
 tg.close();
 },500);
 
-},
-(errorMessage)=>{
-// abaikan error scan kecil
 }
-).catch(err=>{
-hasil.innerText="Tidak bisa akses kamera";
-console.log(err);
-});
+
+const scanner = new Html5QrcodeScanner(
+"reader",
+{
+fps:10,
+qrbox:250
+}
+);
+
+scanner.render(onScanSuccess);
 
 </script>
-
-</body>
-</html>
