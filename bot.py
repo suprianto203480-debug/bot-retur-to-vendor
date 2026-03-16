@@ -112,10 +112,41 @@ def tombol_scan():
     return InlineKeyboardMarkup(keyboard)
 
 
-# ================= COMMAND =================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
+    # jika start membawa barcode dari scanner
+    if context.args:
+
+        barcode = context.args[0]
+
+        produk = cari_produk_by_upc(barcode)
+
+        if produk:
+
+            sku, desc, upc, vendor_dc, supplier_dc, vendor_lokal, supplier_lokal, inner = produk
+
+            pesan = (
+                f"SKU : {sku}\n"
+                f"DESC : {desc}\n"
+                f"UPC : {upc}\n\n"
+                f"VENDOR DC : {vendor_dc}\n"
+                f"SUPPLIER DC : {supplier_dc}\n\n"
+                f"VENDOR LOKAL : {vendor_lokal}\n"
+                f"SUPPLIER LOKAL : {supplier_lokal}\n\n"
+                f"INNER : {inner}"
+            )
+
+        else:
+            pesan = f"Produk tidak ditemukan\n\nUPC : {barcode}"
+
+        await update.message.reply_text(
+            pesan,
+            reply_markup=tombol_scan()
+        )
+
+        return
+
+    # jika user hanya ketik /start
     teks = (
         "BOT RETUR VENDOR\n\n"
         "/scan - scan barcode\n"
@@ -127,15 +158,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         teks,
         reply_markup=tombol_scan()
     )
-
-
-async def scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
-    await update.message.reply_text(
-        "Scan barcode produk",
-        reply_markup=tombol_scan()
-    )
-
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
