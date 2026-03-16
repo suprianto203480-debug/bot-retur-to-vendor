@@ -18,6 +18,12 @@ padding:20px;
 width:320px;
 margin:auto;
 }
+
+#hasil{
+font-size:20px;
+font-weight:bold;
+margin-top:10px;
+}
 </style>
 </head>
 
@@ -28,7 +34,7 @@ margin:auto;
 <div id="reader"></div>
 
 <p>Hasil Scan:</p>
-<h3 id="hasil">-</h3>
+<div id="hasil">-</div>
 
 <script>
 
@@ -37,43 +43,35 @@ tg.expand();
 
 let lastScan = "";
 
-const html5QrCode = new Html5Qrcode("reader");
-
 function onScanSuccess(decodedText){
 
-// cegah scan barcode sama berulang cepat
 if(decodedText === lastScan) return;
-
 lastScan = decodedText;
 
 document.getElementById("hasil").innerText = decodedText;
 
-/* kirim barcode ke bot */
+/* kirim data ke bot */
 tg.sendData(decodedText);
 
 }
 
-/* langsung pakai kamera belakang */
-Html5Qrcode.getCameras().then(devices => {
-
-if (devices && devices.length) {
-
-let backCamera = devices[devices.length - 1].id;
-
-html5QrCode.start(
-backCamera,
-{
-fps: 20,
-qrbox: 250
-},
-onScanSuccess
-);
-
+function onScanFailure(error){
+/* abaikan agar scanner cepat */
 }
 
-}).catch(err => {
-console.log(err);
-});
+const html5QrcodeScanner = new Html5QrcodeScanner(
+"reader",
+{
+fps:15,
+qrbox:250,
+videoConstraints:{
+facingMode:"environment"
+}
+},
+false
+);
+
+html5QrcodeScanner.render(onScanSuccess,onScanFailure);
 
 </script>
 
