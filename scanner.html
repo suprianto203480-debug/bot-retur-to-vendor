@@ -15,7 +15,7 @@ padding:20px;
 }
 
 #reader{
-width:300px;
+width:320px;
 margin:auto;
 }
 </style>
@@ -35,34 +35,35 @@ margin:auto;
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-let scanned = false;
+let scanned=false;
 
 function onScanSuccess(decodedText){
 
 if(scanned) return;
-scanned = true;
+scanned=true;
 
-document.getElementById("hasil").innerText = decodedText;
+document.getElementById("hasil").innerText=decodedText;
 
-/* hentikan kamera */
 html5QrcodeScanner.clear();
 
-/* redirect ke bot */
 setTimeout(function(){
 
 tg.openTelegramLink(
-"https://t.me/hypermart_retur_vendor_bot?start=" + decodedText
+"https://t.me/hypermart_retur_vendor_bot?start="+decodedText
 );
 
 },500);
 
 }
 
-const html5QrcodeScanner = new Html5QrcodeScanner(
+const html5QrcodeScanner=new Html5QrcodeScanner(
 "reader",
 {
-fps:10,
-qrbox:250
+fps:12,
+qrbox:250,
+videoConstraints:{
+facingMode:"environment"
+}
 }
 );
 
