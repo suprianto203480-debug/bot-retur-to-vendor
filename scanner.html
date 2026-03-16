@@ -1,33 +1,9 @@
-<script>
-
-const tg = window.Telegram.WebApp;
-
-/* WAJIB untuk webapp telegram */
-tg.ready();
-tg.expand();
-
 function onScanSuccess(decodedText){
 
 document.getElementById("hasil").innerText = decodedText;
 
-/* kirim barcode ke bot */
-tg.sendData(decodedText);
-
-/* tutup scanner */
-setTimeout(function(){
-tg.close();
-},500);
+/* redirect ke bot telegram dengan parameter barcode */
+window.location.href =
+"https://t.me/hypermart_retur_vendor_bot?start=" + decodedText;
 
 }
-
-const scanner = new Html5QrcodeScanner(
-"reader",
-{
-fps:10,
-qrbox:250
-}
-);
-
-scanner.render(onScanSuccess);
-
-</script>
