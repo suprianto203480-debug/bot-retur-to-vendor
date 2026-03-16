@@ -334,8 +334,6 @@ async def cari_otomatis(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pesan = "\n-----------------------------\n\n".join(hasil_list)
 
     await update.message.reply_text(pesan)
-# ================= MAIN =================
-
 def main():
 
     app = ApplicationBuilder().token(TOKEN).build()
@@ -361,8 +359,8 @@ def main():
 
     print("BOT RETUR VENDOR AKTIF")
 
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-    main()
+    main())
