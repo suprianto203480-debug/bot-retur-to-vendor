@@ -1,34 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Scanner Barcode</title>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-
-<style>
-body{
-font-family:Arial;
-text-align:center;
-padding:20px;
-}
-
-#reader{
-width:300px;
-margin:auto;
-}
-</style>
-</head>
-
-<body>
-
-<h2>Scanner Barcode</h2>
-
-<div id="reader"></div>
-
-<p>Hasil Scan:</p>
-<h3 id="hasil">-</h3>
 
 <script>
 
@@ -37,6 +8,8 @@ tg.expand();
 
 let scanned = false;
 
+const html5QrCode = new Html5Qrcode("reader");
+
 function onScanSuccess(decodedText){
 
 if(scanned) return;
@@ -44,31 +17,40 @@ scanned = true;
 
 document.getElementById("hasil").innerText = decodedText;
 
-/* hentikan kamera */
-html5QrcodeScanner.clear();
+/* stop kamera */
+html5QrCode.stop();
 
-/* redirect ke bot */
+/* kembali ke bot */
 setTimeout(function(){
 
 tg.openTelegramLink(
 "https://t.me/hypermart_retur_vendor_bot?start=" + decodedText
 );
 
-},500);
+},300);
 
 }
 
-const html5QrcodeScanner = new Html5QrcodeScanner(
-"reader",
+/* langsung pakai kamera belakang */
+Html5Qrcode.getCameras().then(devices => {
+
+if (devices && devices.length) {
+
+let cameraId = devices[devices.length - 1].id; // biasanya kamera belakang
+
+html5QrCode.start(
+cameraId,
 {
-fps:10,
-qrbox:250
-}
+fps: 10,
+qrbox: 250
+},
+onScanSuccess
 );
 
-html5QrcodeScanner.render(onScanSuccess);
+}
+
+}).catch(err => {
+console.log(err);
+});
 
 </script>
-
-</body>
-</html>
