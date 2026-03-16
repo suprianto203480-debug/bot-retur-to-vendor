@@ -15,14 +15,8 @@ padding:20px;
 }
 
 #reader{
-width:320px;
+width:300px;
 margin:auto;
-}
-
-#hasil{
-font-size:20px;
-font-weight:bold;
-margin-top:10px;
 }
 </style>
 </head>
@@ -34,44 +28,45 @@ margin-top:10px;
 <div id="reader"></div>
 
 <p>Hasil Scan:</p>
-<div id="hasil">-</div>
+<h3 id="hasil">-</h3>
 
 <script>
 
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-let lastScan = "";
+let scanned = false;
 
 function onScanSuccess(decodedText){
 
-if(decodedText === lastScan) return;
-lastScan = decodedText;
+if(scanned) return;
+scanned = true;
 
 document.getElementById("hasil").innerText = decodedText;
 
-/* kirim data ke bot */
-tg.sendData(decodedText);
+/* hentikan kamera */
+html5QrcodeScanner.clear();
 
-}
+/* redirect ke bot */
+setTimeout(function(){
 
-function onScanFailure(error){
-/* abaikan agar scanner cepat */
+tg.openTelegramLink(
+"https://t.me/hypermart_retur_vendor_bot?start=" + decodedText
+);
+
+},500);
+
 }
 
 const html5QrcodeScanner = new Html5QrcodeScanner(
 "reader",
 {
-fps:15,
-qrbox:250,
-videoConstraints:{
-facingMode:"environment"
+fps:10,
+qrbox:250
 }
-},
-false
 );
 
-html5QrcodeScanner.render(onScanSuccess,onScanFailure);
+html5QrcodeScanner.render(onScanSuccess);
 
 </script>
 
