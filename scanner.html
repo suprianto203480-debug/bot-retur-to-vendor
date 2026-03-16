@@ -1,34 +1,5 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Scanner Barcode</title>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
-
-<style>
-body{
-font-family:Arial;
-text-align:center;
-padding:20px;
-}
-
-#reader{
-width:300px;
-margin:auto;
-}
-</style>
-</head>
-
-<body>
-
-<h2>Scanner Barcode</h2>
-
-<div id="reader"></div>
-
-<p>Hasil Scan:</p>
-<h3 id="hasil">-</h3>
 
 <script>
 
@@ -44,17 +15,16 @@ scanned = true;
 
 document.getElementById("hasil").innerText = decodedText;
 
-/* hentikan kamera */
+/* stop kamera */
 html5QrcodeScanner.clear();
 
-/* redirect ke bot */
+/* kirim barcode ke bot */
+tg.sendData(decodedText);
+
+/* tutup scanner */
 setTimeout(function(){
-
-tg.openTelegramLink(
-"https://t.me/hypermart_retur_vendor_bot?start=" + decodedText
-);
-
-},500);
+tg.close();
+},300);
 
 }
 
@@ -69,6 +39,3 @@ qrbox:250
 html5QrcodeScanner.render(onScanSuccess);
 
 </script>
-
-</body>
-</html>
