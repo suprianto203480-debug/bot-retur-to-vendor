@@ -1,33 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Scanner Barcode</title>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body{
+font-family:Arial;
+text-align:center;
+padding:20px;
+}
+
+#reader{
+width:320px;
+margin:auto;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Scanner Barcode</h2>
+
+<div id="reader"></div>
+
+<p>Hasil Scan:</p>
+<h3 id="hasil">-</h3>
 
 <script>
 
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-let scanned = false;
+let lastScan = "";
 
 const html5QrCode = new Html5Qrcode("reader");
 
 function onScanSuccess(decodedText){
 
-if(scanned) return;
-scanned = true;
+// cegah scan barcode sama berulang cepat
+if(decodedText === lastScan) return;
+
+lastScan = decodedText;
 
 document.getElementById("hasil").innerText = decodedText;
 
-/* stop kamera */
-html5QrCode.stop();
-
-/* kembali ke bot */
-setTimeout(function(){
-
-tg.openTelegramLink(
-"https://t.me/hypermart_retur_vendor_bot?start=" + decodedText
-);
-
-},300);
+/* kirim barcode ke bot */
+tg.sendData(decodedText);
 
 }
 
@@ -36,12 +58,12 @@ Html5Qrcode.getCameras().then(devices => {
 
 if (devices && devices.length) {
 
-let cameraId = devices[devices.length - 1].id; // biasanya kamera belakang
+let backCamera = devices[devices.length - 1].id;
 
 html5QrCode.start(
-cameraId,
+backCamera,
 {
-fps: 10,
+fps: 20,
 qrbox: 250
 },
 onScanSuccess
@@ -54,3 +76,6 @@ console.log(err);
 });
 
 </script>
+
+</body>
+</html>
