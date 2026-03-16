@@ -1,9 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Scanner Barcode</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body{
+font-family:Arial;
+text-align:center;
+padding:20px;
+}
+
+#reader{
+width:300px;
+margin:auto;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>Scanner Barcode</h2>
+
+<div id="reader"></div>
+
+<p>Hasil Scan:</p>
+<h3 id="hasil">-</h3>
+
+<script>
+
 function onScanSuccess(decodedText){
 
 document.getElementById("hasil").innerText = decodedText;
 
-/* redirect ke bot telegram dengan parameter barcode */
+/* redirect ke bot telegram */
 window.location.href =
 "https://t.me/hypermart_retur_vendor_bot?start=" + decodedText;
 
 }
+
+const scanner = new Html5QrcodeScanner(
+"reader",
+{
+fps:10,
+qrbox:250
+}
+);
+
+scanner.render(onScanSuccess);
+
+</script>
+
+</body>
+</html>
